@@ -1,13 +1,15 @@
 {
   "client_id": "b1cxvyy3s44uzpwjd7i30dnaq69qvh",
   "client_secret": "6vkhtt7bftaad0ijlawdq3ie6woid3",
-  "access_token": "tlhfxl2v4hd1j6r6rx4l9qk3827j3d",
-  "user_access_token": "mdu57iuei16d3t7msgw6wcloqm9nfw",
+  "#access_token": "6sfnoyignkruxfzhuvl4mn989sme14",
+  "user_access_token": "cwrpd35vmebtnj1anw916c1172s63f",
   "streamer": "fffluppy",
-  "discord_token": "ODA5MzE0NjA5MDQ2ODgwMjY2.GNY7Hv.zbP5FGXvDCGr7uFzIdWxta-azfpreFQqkoOrQw",
-
-  "twitch_discord_channel": 1025313458582982687,
-
+  "discord_token": "MTA4ODY2OTEyNjk4MzE1OTgzOA.GnfHk1.liConm9HyrXbJwrWuH_BgDG5f7vet20eUYX7H0",
+  "#discord_token": "MTExMjk0MDc1NjgzMTgzODM2MQ.G47ZjV.7-VBRSbRbdmcGC4S4IDhRfpF7iDoFucaCAUXq0",
+  
+  "twitch_notification_channel": 1088993096722813029,
+  "twitch_reward_channel": 1057408587644801124,
+  
   "reward_id": "364fb846-0eb3-495b-9cbf-a3c057d0907e",
   "broadcaster_id": "448248320"
 }
