@@ -5,6 +5,10 @@ from datetime import datetime
 with open("conf.json") as conf_file:
     conf = json.load(conf_file)
 
+#account_id = 397517649
+#url = f"https://api.opendota.com/api/players/{account_id}"
+#response = requests.get(url)
+#print(response.json())
 
 def get_app_access_token():
     params = {
@@ -24,12 +28,12 @@ def get_user(login_name):
     }
 
     headers = {
-        "Authorization": "Bearer {}".format(conf["access_token"]),
+        "Authorization": "Bearer {}".format(conf["user_access_token"]),
         "Client-id": conf["client_id"]
     }
 
     response = requests.get("https://api.twitch.tv/helix/users", params=params, headers=headers)
-    return response.json()
+    return {entry["login"]: entry["id"] for entry in response.json()["data"]}
 
 
 def get_streams(user):
@@ -38,16 +42,13 @@ def get_streams(user):
     }
 
     headers = {
-        "Authorization": "Bearer {}".format(conf["access_token"]),
+        "Authorization": "Bearer {}".format(conf["user_access_token"]),
         "Client-id": conf["client_id"]
     }
 
     response = requests.get("https://api.twitch.tv/helix/streams", params=params, headers=headers)
+    print(response.json)
     return {entry["user_login"]: entry for entry in response.json()["data"]}
-user=get_user(conf["streamer"])
-stream=get_streams(conf["streamer"])
-print(user)
-print(stream)
 
 
 def get_followers(user):
@@ -60,40 +61,12 @@ def get_followers(user):
         "Client-id": conf["client_id"]
     }
 
-    response = requests.get("https://api.twitch.tv/helix/users/follows?to_id=448248320&first=1", params=params, headers=headers)
+    response = requests.get("https://api.twitch.tv/helix/channels/followers?broadcaster_id=448248320", params=params, headers=headers)
     return response.json()
 
 
 online_users = {}
 
-
-def get_redemption_reward(broadcaster_id, reward_id):
-    params = {
-        "broadcaster_id": broadcaster_id,
-        "reward_id": reward_id,
-        "status": "UNFULFILLED"
-    }
-
-    headers = {
-        'Authorization': "Bearer {}".format(conf["user_access_token"]),
-        'Client-Id': conf["client_id"]
-    }
-
-    response = requests.get("https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions", params=params, headers=headers)
-    return response.json()
-reward=get_redemption_reward(conf["broadcaster_id"], conf["reward_id"])
-print(reward)
-
-
-def get_connections():
-
-    url = "https://api.twitch.tv/helix/users/@me/connections"
-
-    headers = {"Authorization": "Bearer " + conf["access_token"]}
-    response = requests.get(url, headers=headers)
-    return response.json()
-con=get_connections()
-print(con)
 
 def get_notifications():
     user_name = conf["streamer"]
@@ -124,3 +97,43 @@ def get_notifications():
         print(started_at)
         print(notifications)
     return notifications
+
+
+def get_redemption_reward():
+    params = {
+        "broadcaster_id": conf["broadcaster_id"],
+        "reward_id": conf["reward_id"],
+        "status": "UNFULFILLED"
+    }
+
+    headers = {
+        'Authorization': "Bearer {}".format(conf["user_access_token"]),
+        'Client-Id': conf["client_id"]
+    }
+
+    response = requests.get("https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions", params=params, headers=headers)
+    return response.json()
+
+
+def update_redemption_status(rr_id, status):
+    params = {
+        "broadcaster_id": conf["broadcaster_id"],
+        "reward_id": conf["reward_id"],
+        "id": rr_id
+    }
+
+    headers = {
+        'Authorization': "Bearer {}".format(conf["user_access_token"]),
+        'Client-Id': conf["client_id"]
+    }
+
+    data = {
+        'status': status
+    }
+
+    response = requests.patch("https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions", params=params, headers=headers, data=data)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Ошибка при обновлении статуса награды: {response.status_code} {response.reason}")
+
