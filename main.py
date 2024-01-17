@@ -523,12 +523,12 @@ async def stream(message):
             await client.change_presence(activity=activity)
       
     else:
-        message.channel.send("fffluppy офлайн")
         activity = disnake.Activity(
           type=disnake.ActivityType.playing,
           name=f'{prefix}команды'
         )
         await client.change_presence(activity=activity)
+        await message.channel.send("fffluppy офлайн")
         
 
 with open("conf.json") as conf_file:
