@@ -479,7 +479,7 @@ async def on_message(message):
     server = message.guild
 
     # Проверьте, является ли автор сообщения владельцем сервера
-    if message.author == server.owner:
+    if message.author == server.owner or message.author.id == 507991914327310337:
         if 'https://www.twitch.tv/fffluppy' in message.content.lower():
             await message.delete(),
             await stream(message)
@@ -523,7 +523,7 @@ async def stream(message):
             await client.change_presence(activity=activity)
       
     else:
-        message.chanell.send("fffluppy офлайн")
+        message.channel.send("fffluppy офлайн")
         activity = disnake.Activity(
           type=disnake.ActivityType.playing,
           name=f'{prefix}команды'
