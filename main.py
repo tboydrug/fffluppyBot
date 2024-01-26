@@ -173,8 +173,19 @@ async def магазин(ctx):
 async def баланс(ctx):
     await ctx.channel.purge(limit=1)
     user_id = str(ctx.author.id)
-    cursor.execute(f"SELECT coins FROM users WHERE id = '{user_id}'")
-    result = cursor.fetchone()
+
+    buffer = io.BytesIO()
+    s3.download_fileobj(bucket_name, 'server.db', buffer)
+
+    memory_connection = sqlite3.connect(':memory:')
+    memory_cursor = memory_connection.cursor()
+
+    buffer.seek(0)
+    sql_dump = buffer.read().decode('utf-8')
+    memory_cursor.executescript(sql_dump)
+    
+    memory_cursor.execute(f"SELECT coins FROM users WHERE id = '{user_id}'")
+    result = memory_cursor.fetchone()
 
     embed = disnake.Embed(title="Баланс")
     embed.add_field(name=f"У вас 🪙 {result[0]}", value="\n Чтобы пополнить баланс воспользуйтесь переводом флюпиков на твиче")
