@@ -182,6 +182,7 @@ async def баланс(ctx):
 
     buffer.seek(0)
     sql_dump = buffer.read().decode('utf-8')
+    print("SQL Dump:", sql_dump)
     memory_cursor.executescript(sql_dump)
     
     memory_cursor.execute(f"SELECT coins FROM users WHERE id = '{user_id}'")
