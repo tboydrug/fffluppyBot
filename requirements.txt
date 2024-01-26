@@ -20,6 +20,5 @@ networkx==3.2.1
 numpy==1.26.3
 pillow==10.2.0
 requests==2.31.0
-urllib3==2.1.0
 Werkzeug==3.0.1
 yarl==1.9.4
