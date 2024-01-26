@@ -34,8 +34,6 @@ bucket_name = 'fffluppy-server'
 connection = sqlite3.connect('server.db')
 cursor = connection.cursor()
 
-s3.upload_file(db_filename, bucket_name, db_filename)
-
 ROLES_TO_CHANGE = [
     {'role_id': 1102249945207160903, 'colors': ['#020202', '#fa0000', '#d38f4c', '#f8fa00', '#4caf2d', '#00ffe9', '#374ac0', '#d666cc']}
 ]
@@ -83,6 +81,12 @@ async def on_ready():
                 cursor.execute(f"UPDATE users SET name = ? WHERE id = {member.id}", (username,))
 
     connection.commit()
+    
+    connection.seek(0)
+
+    s3_object = BytesIO(connection.read())
+
+    s3.upload_fileobj(s3_object, bucket_name, server.db)
 
     if remove_expired_roles.is_running():
       remove_expired_roles.cancel()
