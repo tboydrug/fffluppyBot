@@ -85,7 +85,7 @@ async def on_ready():
     cursor.execute("SELECT * FROM users")
     data = cursor.fetchall()
 
-    # Создаем BytesIO объект и записываем в него содержимое базы данных
+    # Создаем io.BytesIO объект и записываем в него содержимое базы данных
     s3_object = io.BytesIO()
     for row in data:
         s3_object.write(str(row).encode('utf-8'))
@@ -189,13 +189,16 @@ async def add_coins(ctx, member: disnake.Member, count: int):
     cursor.execute(f"UPDATE users SET coins = coins + '{count}' WHERE id = '{user_id}'")
     connection.commit()
 
-    s3_object = BytesIO()
+    cursor.execute("SELECT * FROM users")
+    data = cursor.fetchall()
+
+    s3_object = io.BytesIO()
     for row in data:
         s3_object.write(str(row).encode('utf-8'))
 
     s3_object.seek(0)
 
-    s3.upload_fileobj(s3_object, bucket_name, db_filename)
+    s3.upload_fileobj(s3_object, bucket_name, 'server.db')
     
     print(f"{ctx.author.mention} начислил {member.mention} {count} флюпиков")
 
@@ -208,13 +211,16 @@ async def create_role(guild, role_name, duration, colour):
         cursor.execute(f"INSERT INTO roles (role_id, role_name, color, created_at) VALUES ({role.id}, '{role_name}', '{colour}', {created_at + duration})")
         connection.commit()
 
-        s3_object = BytesIO()
+        cursor.execute("SELECT * FROM users")
+        data = cursor.fetchall()
+
+        s3_object = io.BytesIO()
         for row in data:
             s3_object.write(str(row).encode('utf-8'))
 
         s3_object.seek(0)
 
-        s3.upload_fileobj(s3_object, bucket_name, db_filename)
+        s3.upload_fileobj(s3_object, bucket_name, 'server.db')
     
         asyncio.create_task(remove_role(role.id, duration, created_at))
     else:
@@ -231,13 +237,16 @@ async def remove_role(role_id, duration, created_at):
     cursor.execute(f"DELETE FROM roles WHERE role_id = {role_id}")
     connection.commit()
 
-    s3_object = BytesIO()
+    cursor.execute("SELECT * FROM users")
+    data = cursor.fetchall()
+
+    s3_object = io.BytesIO()
     for row in data:
         s3_object.write(str(row).encode('utf-8'))
 
     s3_object.seek(0)
 
-    s3.upload_fileobj(s3_object, bucket_name, db_filename)
+    s3.upload_fileobj(s3_object, bucket_name, 'server.db')
 
 @client.slash_command(description="Кастомная роль, которая НЕ отображается отдельно в списке участников")
 async def купить_роль(ctx, name: str, colour: str = '020202'):
@@ -272,13 +281,16 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
         cursor.execute(f"UPDATE users SET coins = coins - 5000 WHERE id = '{user_id}'")
         connection.commit()
 
-        s3_object = BytesIO()
+        cursor.execute("SELECT * FROM users")
+        data = cursor.fetchall()
+
+        s3_object = io.BytesIO()
         for row in data:
             s3_object.write(str(row).encode('utf-8'))
 
         s3_object.seek(0)
 
-        s3.upload_fileobj(s3_object, bucket_name, db_filename)
+        s3.upload_fileobj(s3_object, bucket_name, 'server.db')
       
     else:
         await ctx.send(f"{ctx.author.mention}, у вас недостаточно монет для покупки роли.")
@@ -336,13 +348,16 @@ async def remove_expired_roles():
             cursor.execute(f"DELETE FROM roles WHERE role_id = {role_id}")
             connection.commit()
 
-            s3_object = BytesIO()
+            cursor.execute("SELECT * FROM users")
+            data = cursor.fetchall()
+
+            s3_object = io.BytesIO()
             for row in data:
                 s3_object.write(str(row).encode('utf-8'))
 
             s3_object.seek(0)
 
-            s3.upload_fileobj(s3_object, bucket_name, db_filename)
+            s3.upload_fileobj(s3_object, bucket_name, 'server.db')
             
             await channel.send(f"Role '{role_name}' deleted")
 
@@ -419,13 +434,16 @@ async def on_member_update(before, after):
             print(f"{before_name} изменил имя на {after.name}")
             connection.commit()
 
-            s3_object = BytesIO()
+            cursor.execute("SELECT * FROM users")
+            data = cursor.fetchall()
+
+            s3_object = io.BytesIO()
             for row in data:
                 s3_object.write(str(row).encode('utf-8'))
 
             s3_object.seek(0)
 
-            s3.upload_fileobj(s3_object, bucket_name, db_filename)
+            s3.upload_fileobj(s3_object, bucket_name, 'server.db')
 
 
 @client.event
@@ -441,13 +459,16 @@ async def on_member_join(member):
 
     connection.commit()
 
-    s3_object = BytesIO()
+    cursor.execute("SELECT * FROM users")
+    data = cursor.fetchall()
+
+    s3_object = io.BytesIO()
     for row in data:
         s3_object.write(str(row).encode('utf-8'))
 
     s3_object.seek(0)
 
-    s3.upload_fileobj(s3_object, bucket_name, db_filename)
+    s3.upload_fileobj(s3_object, bucket_name, 'server.db')
 
     role = disnake.utils.get(member.guild.roles, id=1090194970050318356)
 
@@ -532,13 +553,16 @@ async def перевод(ctx):
                 cursor.execute(f"UPDATE users SET coins = coins + {reward['reward']['cost']} WHERE name = '{reward['user_input']}'")
                 connection.commit()
 
-                s3_object = BytesIO()
+                cursor.execute("SELECT * FROM users")
+                data = cursor.fetchall()
+
+                s3_object = io.BytesIO()
                 for row in data:
                     s3_object.write(str(row).encode('utf-8'))
 
                 s3_object.seek(0)
 
-                s3.upload_fileobj(s3_object, bucket_name, db_filename)
+                s3.upload_fileobj(s3_object, bucket_name, 'server.db')
             
                 twitch.update_redemption_status(reward['id'], status)
                 member = guild.get_member_named(reward['user_input'])
