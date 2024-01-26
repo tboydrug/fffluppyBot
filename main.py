@@ -1,5 +1,5 @@
 from keep_alive import keep_alive
-from google.colab import drive
+import boto3
 import disnake
 # from disnake import Permissions
 import json
@@ -18,8 +18,6 @@ import random
 from colormath.color_objects import sRGBColor
 #from colormath.color_diff import delta_e_cie1976
 
-drive.mount('/content/drive')
-
 guild_id = 1057408057426067526
 logs_id = 1111651191919743008 
 name_bot = 'fffluppy'
@@ -30,8 +28,13 @@ follower_role = 1057413976570462298
 
 client = commands.Bot(command_prefix=prefix, help_command=None, intents=disnake.Intents.all(), test_guilds=[1057408057426067526])
 
-connection = sqlite3.connect('content/drive/My Drive/fffluppy/server.db')
+s3 = boto3.client('s3', aws_access_key_id='AKIAVFVCOP3XTVF52O4R', aws_secret_access_key='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')
+bucket_name = 'fffluppy-server'
+
+connection = sqlite3.connect('server.db')
 cursor = connection.cursor()
+
+s3.upload_file(db_filename, bucket_name, db_filename)
 
 ROLES_TO_CHANGE = [
     {'role_id': 1102249945207160903, 'colors': ['#020202', '#fa0000', '#d38f4c', '#f8fa00', '#4caf2d', '#00ffe9', '#374ac0', '#d666cc']}
