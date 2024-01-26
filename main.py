@@ -82,10 +82,18 @@ async def on_ready():
 
     connection.commit()
     
-    connection.seek(0)
+    cursor.execute("SELECT * FROM users")
+    data = cursor.fetchall()
 
-    s3_object = BytesIO(connection.read())
+    # Создаем BytesIO объект и записываем в него содержимое базы данных
+    s3_object = io.BytesIO()
+    for row in data:
+        s3_object.write(str(row).encode('utf-8'))
 
+    # Переместите указатель файла в начало перед чтением
+    s3_object.seek(0)
+
+    # Загружаем файл базы данных на Amazon S3
     s3.upload_fileobj(s3_object, bucket_name, server.db)
 
     if remove_expired_roles.is_running():
