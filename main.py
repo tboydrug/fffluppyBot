@@ -188,6 +188,15 @@ async def add_coins(ctx, member: disnake.Member, count: int):
     user_id = str(member.id)
     cursor.execute(f"UPDATE users SET coins = coins + '{count}' WHERE id = '{user_id}'")
     connection.commit()
+
+    s3_object = BytesIO()
+    for row in data:
+        s3_object.write(str(row).encode('utf-8'))
+
+    s3_object.seek(0)
+
+    s3.upload_fileobj(s3_object, bucket_name, db_filename)
+    
     print(f"{ctx.author.mention} начислил {member.mention} {count} флюпиков")
 
 
@@ -198,6 +207,15 @@ async def create_role(guild, role_name, duration, colour):
         created_at = int(time.time())
         cursor.execute(f"INSERT INTO roles (role_id, role_name, color, created_at) VALUES ({role.id}, '{role_name}', '{colour}', {created_at + duration})")
         connection.commit()
+
+        s3_object = BytesIO()
+        for row in data:
+            s3_object.write(str(row).encode('utf-8'))
+
+        s3_object.seek(0)
+
+        s3.upload_fileobj(s3_object, bucket_name, db_filename)
+    
         asyncio.create_task(remove_role(role.id, duration, created_at))
     else:
         print("Роль уже существует")
@@ -213,6 +231,13 @@ async def remove_role(role_id, duration, created_at):
     cursor.execute(f"DELETE FROM roles WHERE role_id = {role_id}")
     connection.commit()
 
+    s3_object = BytesIO()
+    for row in data:
+        s3_object.write(str(row).encode('utf-8'))
+
+    s3_object.seek(0)
+
+    s3.upload_fileobj(s3_object, bucket_name, db_filename)
 
 @client.slash_command(description="Кастомная роль, которая НЕ отображается отдельно в списке участников")
 async def купить_роль(ctx, name: str, colour: str = '020202'):
@@ -246,6 +271,14 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
         # вычитаем стоимость роли из баланса пользователя
         cursor.execute(f"UPDATE users SET coins = coins - 5000 WHERE id = '{user_id}'")
         connection.commit()
+
+        s3_object = BytesIO()
+        for row in data:
+            s3_object.write(str(row).encode('utf-8'))
+
+        s3_object.seek(0)
+
+        s3.upload_fileobj(s3_object, bucket_name, db_filename)
       
     else:
         await ctx.send(f"{ctx.author.mention}, у вас недостаточно монет для покупки роли.")
@@ -302,6 +335,15 @@ async def remove_expired_roles():
             await role.delete()
             cursor.execute(f"DELETE FROM roles WHERE role_id = {role_id}")
             connection.commit()
+
+            s3_object = BytesIO()
+            for row in data:
+                s3_object.write(str(row).encode('utf-8'))
+
+            s3_object.seek(0)
+
+            s3.upload_fileobj(s3_object, bucket_name, db_filename)
+            
             await channel.send(f"Role '{role_name}' deleted")
 
 
@@ -370,12 +412,20 @@ async def on_member_update(before, after):
         if role_to_remove in before_with_role_to_remove:
             await after.remove_roles(role_to_remove)
 
-
-    if cursor.execute(f"SELECT name FROM users WHERE id = {before.id}").fetchone() != after_username:
+    before_name = cursor.execute(f"SELECT name FROM users WHERE id = {before.id}").fetchone()
+    if before_name != after_username:
         if cursor.execute(f"SELECT id FROM users WHERE id = {before.id}").fetchone():
             cursor.execute("UPDATE users SET name = ? WHERE id = ?", (after_username, before.id))
-            print(f"{before.name} изменил имя на {after.name}")
+            print(f"{before_name} изменил имя на {after.name}")
             connection.commit()
+
+            s3_object = BytesIO()
+            for row in data:
+                s3_object.write(str(row).encode('utf-8'))
+
+            s3_object.seek(0)
+
+            s3.upload_fileobj(s3_object, bucket_name, db_filename)
 
 
 @client.event
@@ -390,6 +440,14 @@ async def on_member_join(member):
         pass
 
     connection.commit()
+
+    s3_object = BytesIO()
+    for row in data:
+        s3_object.write(str(row).encode('utf-8'))
+
+    s3_object.seek(0)
+
+    s3.upload_fileobj(s3_object, bucket_name, db_filename)
 
     role = disnake.utils.get(member.guild.roles, id=1090194970050318356)
 
@@ -473,6 +531,15 @@ async def перевод(ctx):
                 status = "FULFILLED"
                 cursor.execute(f"UPDATE users SET coins = coins + {reward['reward']['cost']} WHERE name = '{reward['user_input']}'")
                 connection.commit()
+
+                s3_object = BytesIO()
+                for row in data:
+                    s3_object.write(str(row).encode('utf-8'))
+
+                s3_object.seek(0)
+
+                s3.upload_fileobj(s3_object, bucket_name, db_filename)
+            
                 twitch.update_redemption_status(reward['id'], status)
                 member = guild.get_member_named(reward['user_input'])
                 await channel.send(f"{reward['user_login']} перевёл флюпики {member.mention}")
