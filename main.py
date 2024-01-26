@@ -94,7 +94,7 @@ async def on_ready():
     s3_object.seek(0)
 
     # Загружаем файл базы данных на Amazon S3
-    s3.upload_fileobj(s3_object, bucket_name, server.db)
+    s3.upload_fileobj(s3_object, bucket_name, 'server.db')
 
     if remove_expired_roles.is_running():
       remove_expired_roles.cancel()
