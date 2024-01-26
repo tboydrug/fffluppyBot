@@ -28,7 +28,7 @@ follower_role = 1057413976570462298
 
 client = commands.Bot(command_prefix=prefix, help_command=None, intents=disnake.Intents.all(), test_guilds=[1057408057426067526])
 
-connection = sqlite3.connect('server.db')
+connection = sqlite3.connect('content/drive/My Drive/fffluppy/server.db')
 cursor = connection.cursor()
 
 ROLES_TO_CHANGE = [
