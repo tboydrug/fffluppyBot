@@ -1,4 +1,5 @@
 from keep_alive import keep_alive
+from google.colab import drive
 import disnake
 # from disnake import Permissions
 import json
@@ -17,6 +18,7 @@ import random
 from colormath.color_objects import sRGBColor
 #from colormath.color_diff import delta_e_cie1976
 
+drive.mount('/content/drive')
 
 guild_id = 1057408057426067526
 logs_id = 1111651191919743008 
