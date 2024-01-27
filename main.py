@@ -110,9 +110,10 @@ async def on_ready():
     # Создаем io.BytesIO объект и записываем в него содержимое базы данных
     s3_object = io.BytesIO()
 
-    # Используем команду .dump с обоими таблицами
     try:
-        subprocess.run(['sqlite3', 'server.db', '.dump', 'users', 'roles'], stdout=s3_object, check=True, text=True)
+        process = subprocess.run(['sqlite3', 'server.db', '.dump', 'users', 'roles'], stdout=subprocess.PIPE, check=True, text=True)
+        output_bytes = process.stdout.encode('utf-8')
+        s3_object.write(output_bytes)
     except subprocess.CalledProcessError as e:
         print(f"Ошибка при выполнении команды .dump: {e}")
     # Переместите указатель файла в начало перед чтением
