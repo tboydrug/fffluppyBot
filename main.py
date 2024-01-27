@@ -208,7 +208,7 @@ async def баланс(ctx):
     cursor.executescript(s3_object.read().decode('utf-8'))
     
     cursor.execute(f"SELECT coins FROM users WHERE id = '{user_id}'")
-    result = memory_cursor.fetchone()
+    result = cursor.fetchone()
 
     embed = disnake.Embed(title="Баланс")
     embed.add_field(name=f"У вас 🪙 {result[0]}", value="\n Чтобы пополнить баланс воспользуйтесь переводом флюпиков на твиче")
