@@ -95,20 +95,18 @@ async def on_ready():
                 cursor.execute(
                     "INSERT INTO users (name, id, tw_id, coins, rep, rank, points) VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (username, member.id, 'NULL', 0, 0, 0, 0))
-                print(f"{username} добавлен в базу данных")
             else:
                 cursor.execute(f"UPDATE users SET name = ? WHERE id = {member.id}", (username,))
-                print("элементы базы данных обновленны")
 
     connection.commit()
     
     cursor.execute("SELECT * FROM users")
-    data = cursor.fetchall()
-    print(f"данные для форматирования базы данных {data}")
+    cursor.execute("SELECT * FROM roles")
+
     # Создаем io.BytesIO объект и записываем в него содержимое базы данных
     s3_object = io.BytesIO()
     
-    output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+    output = subprocess.check_output(['sqlite3', 'server.db', '.dump', 'users', 'roles'], text=True)
     s3_object.write(output.encode('utf-8'))
     # Переместите указатель файла в начало перед чтением
     s3_object.seek(0)
