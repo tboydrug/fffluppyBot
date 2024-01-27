@@ -393,8 +393,20 @@ async def выделить_роль(ctx, role_id: str):
 async def remove_expired_roles():
     print("remove role check")
     now = int(time.time())
+
+    s3_object = io.BytesIO()
+    s3.download_fileobj(bucket_name, db_filename, s3_object)
+
+    s3_object.seek(0)
+    
+    connection = sqlite3.connect(':memory:')
+    cursor = connection.cursor()
+
+    cursor.executescript(s3_object.read().decode('utf-8'))
+    
     cursor.execute("SELECT role_id, role_name, created_at FROM roles")
     expired_roles = cursor.fetchall()
+    connection.close()
     for expired_role in expired_roles:
         print("check role")
         role_id = expired_role[0]
@@ -405,6 +417,9 @@ async def remove_expired_roles():
         if role and created_at < now:
             channel = client.get_channel(logs_id)
             await role.delete()
+            
+            connection = sqlite3.connect('server.db')
+            cursor = connection.cursor()
             cursor.execute(f"DELETE FROM roles WHERE role_id = {role_id}")
             connection.commit()
 
@@ -418,6 +433,8 @@ async def remove_expired_roles():
             s3_object.seek(0)
 
             s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+
+            connection.close()
             
             await channel.send(f"Role '{role_name}' deleted")
 
@@ -486,7 +503,17 @@ async def on_member_update(before, after):
         before_with_role_to_remove = [role for role in before.roles if role == role_to_remove]
         if role_to_remove in before_with_role_to_remove:
             await after.remove_roles(role_to_remove)
+            
+    s3_object = io.BytesIO()
+    s3.download_fileobj(bucket_name, db_filename, s3_object)
 
+    s3_object.seek(0)
+    
+    connection = sqlite3.connect(':memory:')
+    cursor = connection.cursor()
+
+    cursor.executescript(s3_object.read().decode('utf-8'))
+    
     before_name = cursor.execute(f"SELECT name FROM users WHERE id = {before.id}").fetchone()
     if before_name != after_username:
         if cursor.execute(f"SELECT id FROM users WHERE id = {before.id}").fetchone():
@@ -505,6 +532,7 @@ async def on_member_update(before, after):
 
             s3.upload_fileobj(s3_object, bucket_name, 'server.db')
 
+            connection.close()
 
 @client.event
 async def on_member_join(member):
@@ -512,6 +540,17 @@ async def on_member_join(member):
         username = f"{member.name}#{member.discriminator}"
     else:
         username = member.name
+        
+    s3_object = io.BytesIO()
+    s3.download_fileobj(bucket_name, db_filename, s3_object)
+
+    s3_object.seek(0)
+    
+    connection = sqlite3.connect(':memory:')
+    cursor = connection.cursor()
+
+    cursor.executescript(s3_object.read().decode('utf-8'))
+    
     if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
         cursor.execute("INSERT INTO users (name, id, tw_id, coins, rep, rank, points) VALUES (?, ?, ?, ?, ?, ?, ?)", (username, member.id, 'NULL', 0, 0, 0, 0))
     else:
@@ -529,6 +568,7 @@ async def on_member_join(member):
     s3_object.seek(0)
 
     s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+    connection.close()
 
     role = disnake.utils.get(member.guild.roles, id=1090194970050318356)
 
@@ -608,6 +648,16 @@ async def перевод(ctx):
     if channel is not None and bool(rewards):
         for reward in rewards['data']:
 
+            s3_object = io.BytesIO()
+            s3.download_fileobj(bucket_name, db_filename, s3_object)
+
+            s3_object.seek(0)
+    
+            connection = sqlite3.connect(':memory:')
+            cursor = connection.cursor()
+
+            cursor.executescript(s3_object.read().decode('utf-8'))
+
             if cursor.execute(f"SELECT id FROM users WHERE name = '{reward['user_input']}'").fetchone():
                 status = "FULFILLED"
                 cursor.execute(f"UPDATE users SET coins = coins + {reward['reward']['cost']} WHERE name = '{reward['user_input']}'")
@@ -623,7 +673,9 @@ async def перевод(ctx):
                 s3_object.seek(0)
 
                 s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-            
+
+                connection.close()
+                
                 twitch.update_redemption_status(reward['id'], status)
                 member = guild.get_member_named(reward['user_input'])
                 await channel.send(f"{reward['user_login']} перевёл флюпики {member.mention}")
