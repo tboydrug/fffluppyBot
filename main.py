@@ -32,8 +32,7 @@ client = commands.Bot(command_prefix=prefix, help_command=None, intents=disnake.
 s3 = boto3.client('s3', aws_access_key_id='AKIAVFVCOP3XTVF52O4R', aws_secret_access_key='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')
 bucket_name = 'fffluppy-server'
 
-connection = sqlite3.connect('server.db')
-cursor = connection.cursor()
+
 
 ROLES_TO_CHANGE = [
     {'role_id': 1102249945207160903, 'colors': ['#020202', '#fa0000', '#d38f4c', '#f8fa00', '#4caf2d', '#00ffe9', '#374ac0', '#d666cc']}
@@ -50,6 +49,21 @@ async def on_ready():
 
     # await client.user.edit(avatar=avatar)
 
+    # Попробуем загрузить файл с Amazon S3
+    try:
+        s3.download_file(bucket_name, 'server.db', 'server.db')
+        # Если загрузка успешна, используем код для работы с памятью
+        s3_object = io.BytesIO()
+        s3.download_fileobj(bucket_name, 'server.db', s3_object)
+        s3_object.seek(0)
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
+
+    except Exception as e:
+        print(f"Файл не существует на Amazon S3. Ошибка: {str(e)}")
+        # Если файла нет, используем код для работы с дисковым файлом
+        connection = sqlite3.connect('server.db')
+        cursor = connection.cursor()
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS users(
         name TEXT,
@@ -67,6 +81,8 @@ async def on_ready():
         color TEXT, 
         created_at INT
     )""")
+
+    
 
     for guild in client.guilds:
         for member in guild.members:
@@ -97,6 +113,8 @@ async def on_ready():
     # Загружаем файл базы данных на Amazon S3
     s3.upload_fileobj(s3_object, bucket_name, 'server.db')
 
+    connection.close()
+
     if remove_expired_roles.is_running():
       remove_expired_roles.cancel()
     
@@ -120,6 +138,9 @@ async def on_ready():
 @client.command()
 async def test(ctx):
     author = ctx.message.author
+    
+    connection = sqlite3.connect('server.db')
+    cursor = connection.cursor()
     cursor.execute("SELECT name FROM users WHERE id = ?", (author.id,))
     result = cursor.fetchone()
 
@@ -129,6 +150,7 @@ async def test(ctx):
     else:
         message = "Твое имя не найдено в базе данных."
 
+    connection.close()
     await ctx.send(message)
 
   
@@ -180,12 +202,12 @@ async def баланс(ctx):
 
     s3_object.seek(0)
     
-    memory_connection = sqlite3.connect(':memory:')
-    memory_cursor = memory_connection.cursor()
+    connection = sqlite3.connect(':memory:')
+    cursor = connection.cursor()
 
-    memory_cursor.executescript(s3_object.read().decode('utf-8'))
+    cursor.executescript(s3_object.read().decode('utf-8'))
     
-    memory_cursor.execute(f"SELECT coins FROM users WHERE id = '{user_id}'")
+    cursor.execute(f"SELECT coins FROM users WHERE id = '{user_id}'")
     result = memory_cursor.fetchone()
 
     embed = disnake.Embed(title="Баланс")
@@ -198,6 +220,9 @@ async def баланс(ctx):
 async def add_coins(ctx, member: disnake.Member, count: int):
     await ctx.channel.purge(limit=1)
     user_id = str(member.id)
+    
+    connection = sqlite3.connect('server.db')
+    cursor = connection.cursor()
     cursor.execute(f"UPDATE users SET coins = coins + '{count}' WHERE id = '{user_id}'")
     connection.commit()
 
@@ -211,7 +236,8 @@ async def add_coins(ctx, member: disnake.Member, count: int):
     s3_object.seek(0)
 
     s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-    
+
+    connection.close()
     print(f"{ctx.author.mention} начислил {member.mention} {count} флюпиков")
 
 
@@ -220,6 +246,9 @@ async def create_role(guild, role_name, duration, colour):
         role = await guild.create_role(name=role_name, color=colour)
         print("Роль создана")
         created_at = int(time.time())
+        
+        connection = sqlite3.connect('server.db')
+        cursor = connection.cursor()
         cursor.execute(f"INSERT INTO roles (role_id, role_name, color, created_at) VALUES ({role.id}, '{role_name}', '{colour}', {created_at + duration})")
         connection.commit()
 
@@ -235,6 +264,8 @@ async def create_role(guild, role_name, duration, colour):
         s3.upload_fileobj(s3_object, bucket_name, 'server.db')
     
         asyncio.create_task(remove_role(role.id, duration, created_at))
+
+        connection.close()
     else:
         print("Роль уже существует")
 
@@ -246,6 +277,9 @@ async def remove_role(role_id, duration, created_at):
     current_time = int(time.time())
     if role and created_at + duration <= current_time:
         await role.delete()
+        
+    connection = sqlite3.connect('server.db')
+    cursor = connection.cursor()
     cursor.execute(f"DELETE FROM roles WHERE role_id = {role_id}")
     connection.commit()
 
@@ -260,6 +294,8 @@ async def remove_role(role_id, duration, created_at):
 
     s3.upload_fileobj(s3_object, bucket_name, 'server.db')
 
+    connection.close()
+
 @client.slash_command(description="Кастомная роль, которая НЕ отображается отдельно в списке участников")
 async def купить_роль(ctx, name: str, colour: str = '020202'):
     print(f"{ctx.author.name} хочет купить роль '{name}' с цветом '{colour}'")
@@ -273,9 +309,19 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
       
     # colour_int = int(colour, 16)
     user_id = str(ctx.author.id)
+    
+    s3_object = io.BytesIO()
+    s3.download_fileobj(bucket_name, db_filename, s3_object)
+
+    s3_object.seek(0)
+    
+    connection = sqlite3.connect(':memory:')
+    cursor = connection.cursor()
+
+    cursor.executescript(s3_object.read().decode('utf-8'))
     cursor.execute(f"SELECT coins FROM users WHERE id = '{user_id}'")
     balance = cursor.fetchone()[0]
-
+    connection.close()
     # проверка наличия достаточного количества денег у пользователя
     if balance >= 5000:
         # создаем роль
@@ -290,6 +336,8 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
         await ctx.author.add_roles(role)
         await ctx.send(f"{ctx.author.mention}, роль '{name}' успешно куплена за 5000 монет.")
         # вычитаем стоимость роли из баланса пользователя
+        connection = sqlite3.connect('server.db')
+        cursor = connection.cursor()
         cursor.execute(f"UPDATE users SET coins = coins - 5000 WHERE id = '{user_id}'")
         connection.commit()
 
@@ -303,7 +351,7 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
         s3_object.seek(0)
 
         s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-      
+        connection.close()
     else:
         await ctx.send(f"{ctx.author.mention}, у вас недостаточно монет для покупки роли.")
 
