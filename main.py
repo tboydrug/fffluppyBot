@@ -51,6 +51,7 @@ async def on_ready():
 
     # Попробуем загрузить файл с Amazon S3
     try:
+        print("Подключение к существующей базе данных")
         s3.download_file(bucket_name, 'server.db', 'server.db')
         # Если загрузка успешна, используем код для работы с памятью
         s3_object = io.BytesIO()
@@ -94,14 +95,16 @@ async def on_ready():
                 cursor.execute(
                     "INSERT INTO users (name, id, tw_id, coins, rep, rank, points) VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (username, member.id, 'NULL', 0, 0, 0, 0))
+                print(f"{username} добавлен в базу данных")
             else:
                 cursor.execute(f"UPDATE users SET name = ? WHERE id = {member.id}", (username,))
+                print("элементы базы данных обновленны")
 
     connection.commit()
     
     cursor.execute("SELECT * FROM users")
     data = cursor.fetchall()
-
+    print(f"данные для форматирования базы данных {data}")
     # Создаем io.BytesIO объект и записываем в него содержимое базы данных
     s3_object = io.BytesIO()
     
@@ -116,7 +119,8 @@ async def on_ready():
     connection.close()
 
     if remove_expired_roles.is_running():
-      remove_expired_roles.cancel()
+        remove_expired_roles.cancel()
+        print("remove_expired_roles отменено")
     
     remove_expired_roles.start()
     #change_color.start()
