@@ -41,12 +41,9 @@ ROLES_TO_CHANGE = [
 @client.event
 async def on_ready():
     print('Bot connected')
-
     # bot_user = await client.fetch_user(client.user.id)
-
     # with open('killua.png', 'rb') as f:
     #   avatar = f.read()
-
     # await client.user.edit(avatar=avatar)
 
     # Попробуем загрузить файл с Amazon S3
@@ -59,13 +56,11 @@ async def on_ready():
         s3_object.seek(0)
         connection = sqlite3.connect(':memory:')
         cursor = connection.cursor()
-
     except Exception as e:
         print(f"Файл не существует на Amazon S3. Ошибка: {str(e)}")
         # Если файла нет, используем код для работы с дисковым файлом
         connection = sqlite3.connect('server.db')
         cursor = connection.cursor()
-
     cursor.execute("""CREATE TABLE IF NOT EXISTS users(
         name TEXT,
         id INT,
@@ -75,16 +70,13 @@ async def on_ready():
         rank INT,
         points INT
     )""")
-
     cursor.execute("""CREATE TABLE IF NOT EXISTS roles(
         role_id INT, 
         role_name TEXT, 
         color TEXT, 
         created_at INT
     )""")
-
     
-
     for guild in client.guilds:
         for member in guild.members:
             if member.discriminator is None:
@@ -95,46 +87,33 @@ async def on_ready():
                 cursor.execute(
                     "INSERT INTO users (name, id, tw_id, coins, rep, rank, points) VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (username, member.id, 'NULL', 0, 0, 0, 0))
+                print(f"{username} добавлен в базу данных")
             else:
                 cursor.execute(f"UPDATE users SET name = ? WHERE id = {member.id}", (username,))
+                print("элементы базы данных обновленны")
 
     connection.commit()
-    
-    # Загружаем данные из обеих таблиц в базу данных
+
     cursor.execute("SELECT * FROM users")
-    data_users = cursor.fetchall()
+    data = cursor.fetchall()
 
-    cursor.execute("SELECT * FROM roles")
-    data_roles = cursor.fetchall()
-
+    print(f"данные для форматирования базы данных {data}")
     # Создаем io.BytesIO объект и записываем в него содержимое базы данных
     s3_object = io.BytesIO()
 
-    try:
-        process = subprocess.run(
-            ['sqlite3', 'server.db', '.dump', 'users', 'roles'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=True,
-            text=True
-        )
-        output_bytes = process.stdout.encode('utf-8')
-        s3_object.write(output_bytes)
-    except subprocess.CalledProcessError as e:
-        print(f"Ошибка при выполнении команды .dump: {e}")
-        print(f"Ошибка вывода: {e.stderr.decode('utf-8') if e.stderr else ''}")
+    output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+    s3_object.write(output.encode('utf-8'))
     # Переместите указатель файла в начало перед чтением
     s3_object.seek(0)
-
     # Загружаем файл базы данных на Amazon S3
     s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-
     connection.close()
 
     if remove_expired_roles.is_running():
+      remove_expired_roles.cancel()
         remove_expired_roles.cancel()
         print("remove_expired_roles отменено")
-    
+
     remove_expired_roles.start()
     #change_color.start()
     
