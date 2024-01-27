@@ -105,8 +105,8 @@ async def on_ready():
     # Создаем io.BytesIO объект и записываем в него содержимое базы данных
     s3_object = io.BytesIO()
     
-    subprocess.call(['sqlite3', 'server.db', '.dump'], stdout=s3_object)
-
+    output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+    s3_object.write(output.encode('utf-8'))
     # Переместите указатель файла в начало перед чтением
     s3_object.seek(0)
 
@@ -231,7 +231,8 @@ async def add_coins(ctx, member: disnake.Member, count: int):
 
     s3_object = io.BytesIO()
     
-    subprocess.call(['sqlite3', 'server.db', '.dump'], stdout=s3_object)
+    output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+    s3_object.write(output.encode('utf-8'))
 
     s3_object.seek(0)
 
@@ -257,7 +258,8 @@ async def create_role(guild, role_name, duration, colour):
 
         s3_object = io.BytesIO()
         
-        subprocess.call(['sqlite3', 'server.db', '.dump'], stdout=s3_object)
+        output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+        s3_object.write(output.encode('utf-8'))
 
         s3_object.seek(0)
 
@@ -288,7 +290,8 @@ async def remove_role(role_id, duration, created_at):
 
     s3_object = io.BytesIO()
     
-    subprocess.call(['sqlite3', 'server.db', '.dump'], stdout=s3_object)
+    output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+    s3_object.write(output.encode('utf-8'))
 
     s3_object.seek(0)
 
@@ -346,7 +349,8 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
 
         s3_object = io.BytesIO()
         
-        subprocess.call(['sqlite3', 'server.db', '.dump'], stdout=s3_object)
+        output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+        s3_object.write(output.encode('utf-8'))
 
         s3_object.seek(0)
 
@@ -428,7 +432,8 @@ async def remove_expired_roles():
 
             s3_object = io.BytesIO()
 
-            subprocess.call(['sqlite3', 'server.db', '.dump'], stdout=s3_object)
+            output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+            s3_object.write(output.encode('utf-8'))
 
             s3_object.seek(0)
 
@@ -526,7 +531,8 @@ async def on_member_update(before, after):
 
             s3_object = io.BytesIO()
             
-            subprocess.call(['sqlite3', 'server.db', '.dump'], stdout=s3_object)
+            output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+            s3_object.write(output.encode('utf-8'))
 
             s3_object.seek(0)
 
@@ -563,7 +569,8 @@ async def on_member_join(member):
 
     s3_object = io.BytesIO()
     
-    subprocess.call(['sqlite3', 'server.db', '.dump'], stdout=s3_object)
+    output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+    s3_object.write(output.encode('utf-8'))
 
     s3_object.seek(0)
 
@@ -668,7 +675,8 @@ async def перевод(ctx):
 
                 s3_object = io.BytesIO()
                 
-                subprocess.call(['sqlite3', 'server.db', '.dump'], stdout=s3_object)
+                output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+                s3_object.write(output.encode('utf-8'))
 
                 s3_object.seek(0)
 
