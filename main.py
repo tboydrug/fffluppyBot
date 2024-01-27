@@ -100,14 +100,21 @@ async def on_ready():
 
     connection.commit()
     
+    # Загружаем данные из обеих таблиц в базу данных
     cursor.execute("SELECT * FROM users")
+    data_users = cursor.fetchall()
+
     cursor.execute("SELECT * FROM roles")
+    data_roles = cursor.fetchall()
 
     # Создаем io.BytesIO объект и записываем в него содержимое базы данных
     s3_object = io.BytesIO()
-    
-    output = subprocess.check_output(['sqlite3', 'server.db', '.dump', 'users', 'roles'], text=True)
-    s3_object.write(output.encode('utf-8'))
+
+    # Используем команду .dump с обоими таблицами
+    try:
+        subprocess.run(['sqlite3', 'server.db', '.dump', 'users', 'roles'], stdout=s3_object, check=True, text=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при выполнении команды .dump: {e}")
     # Переместите указатель файла в начало перед чтением
     s3_object.seek(0)
 
