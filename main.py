@@ -198,7 +198,7 @@ async def баланс(ctx):
     user_id = str(ctx.author.id)
 
     s3_object = io.BytesIO()
-    s3.download_fileobj(bucket_name, server.db, s3_object)
+    s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
     s3_object.seek(0)
     
@@ -314,7 +314,7 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
     user_id = str(ctx.author.id)
     
     s3_object = io.BytesIO()
-    s3.download_fileobj(bucket_name, server.db, s3_object)
+    s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
     s3_object.seek(0)
     
@@ -399,7 +399,7 @@ async def remove_expired_roles():
     now = int(time.time())
 
     s3_object = io.BytesIO()
-    s3.download_fileobj(bucket_name, server.db, s3_object)
+    s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
     s3_object.seek(0)
     
@@ -510,7 +510,7 @@ async def on_member_update(before, after):
             await after.remove_roles(role_to_remove)
             
     s3_object = io.BytesIO()
-    s3.download_fileobj(bucket_name, server.db, s3_object)
+    s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
     s3_object.seek(0)
     
@@ -548,7 +548,7 @@ async def on_member_join(member):
         username = member.name
         
     s3_object = io.BytesIO()
-    s3.download_fileobj(bucket_name, server.db, s3_object)
+    s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
     s3_object.seek(0)
     
@@ -656,7 +656,7 @@ async def перевод(ctx):
         for reward in rewards['data']:
 
             s3_object = io.BytesIO()
-            s3.download_fileobj(bucket_name, server.db, s3_object)
+            s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
             s3_object.seek(0)
     
