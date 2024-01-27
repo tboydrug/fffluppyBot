@@ -111,11 +111,18 @@ async def on_ready():
     s3_object = io.BytesIO()
 
     try:
-        process = subprocess.run(['sqlite3', 'server.db', '.dump', 'users', 'roles'], stdout=subprocess.PIPE, check=True, text=True)
+        process = subprocess.run(
+            ['sqlite3', 'server.db', '.dump', 'users', 'roles'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            text=True
+        )
         output_bytes = process.stdout.encode('utf-8')
         s3_object.write(output_bytes)
     except subprocess.CalledProcessError as e:
         print(f"Ошибка при выполнении команды .dump: {e}")
+        print(f"Ошибка вывода: {e.stderr.decode('utf-8') if e.stderr else ''}")
     # Переместите указатель файла в начало перед чтением
     s3_object.seek(0)
 
