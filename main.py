@@ -129,7 +129,12 @@ async def on_ready():
         s3.upload_fileobj(s3_object, bucket_name, 'server.db')
     except Exception as e:
         print(f"Не удалось инициализировать базу данных. Ошибка: {str(e)}")
-    :
+    finally:
+        if 'connection' in locals():
+            try:
+                connection.close()
+            except NameError:
+                pass
         print("База данных инициализирована.")
         connection.close()
         
