@@ -38,6 +38,25 @@ ROLES_TO_CHANGE = [
     {'role_id': 1102249945207160903, 'colors': ['#020202', '#fa0000', '#d38f4c', '#f8fa00', '#4caf2d', '#00ffe9', '#374ac0', '#d666cc']}
 ]
 
+def is_valid_sqlite_database():
+    try:
+        s3.download_file(bucket_name, 'server.db', 'server.db')
+        s3_object = io.BytesIO()
+        s3.download_fileobj(bucket_name, 'server.db', s3_object)
+        s3_object.seek(0)
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
+        connection.execute("SELECT * FROM sqlite_master")
+        print('База данных не повреждена')
+        return True
+    except sqlite3.Error as e:
+        # Если произошла ошибка, файл не является корректной базой данных SQLite
+        print(f"Файл не является корректной базой данных SQLite. Ошибка: {str(e)}")
+        return False
+    finally:
+        if 'connection' in locals():
+            connection.close()
+
 @client.event
 async def on_ready():
     print('Bot connected')
@@ -48,19 +67,18 @@ async def on_ready():
 
     # Попробуем загрузить файл с Amazon S3
     try:
-        try:
-            s3.download_file(bucket_name, 'server.db', 'server.db')
-            # Если загрузка успешна, используем код для работы с памятью
+        if is_valid_sqlite_database():
             s3_object = io.BytesIO()
             s3.download_fileobj(bucket_name, 'server.db', s3_object)
             s3_object.seek(0)
             connection = sqlite3.connect(':memory:')
             cursor = connection.cursor()
-        except Exception as e:
+        else:
             print(f"Не удалось найти базу данных. Переходим к инициализации. Ошибка: {str(e)}")
             # Если файла нет, используем код для работы с дисковым файлом
             connection = sqlite3.connect('server.db')
             cursor = connection.cursor()
+            
         cursor.execute("""CREATE TABLE IF NOT EXISTS users(
             name TEXT,
             id INT,
