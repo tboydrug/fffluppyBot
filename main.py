@@ -42,6 +42,7 @@ ROLES_TO_CHANGE = [
 
 @client.event
 async def on_ready():
+    await client.wait_until_ready()
     print('Bot connected')
     # bot_user = await client.fetch_user(client.user.id)
     # with open('killua.png', 'rb') as f:
