@@ -717,36 +717,36 @@ async def перевод(ctx):
 
             s3_object.seek(0)
             try:
-            connection = sqlite3.connect(':memory:')
-            cursor = connection.cursor()
-
-            cursor.executescript(s3_object.read().decode('utf-8'))
-
-            if cursor.execute(f"SELECT id FROM users WHERE name = '{reward['user_input']}'").fetchone():
-                status = "FULFILLED"
-                cursor.execute(f"UPDATE users SET coins = coins + {reward['reward']['cost']} WHERE name = '{reward['user_input']}'")
-                connection.commit()
-
-                cursor.execute("SELECT * FROM users")
-                data = cursor.fetchall()
-
-                s3_object = io.BytesIO()
-                
-                output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
-                s3_object.write(output.encode('utf-8'))
-
-                s3_object.seek(0)
-
-                s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-                
-                twitch.update_redemption_status(reward['id'], status)
-                member = guild.get_member_named(reward['user_input'])
-                await channel.send(f"{reward['user_login']} перевёл флюпики {member.mention}")
-            else:
-                status = "CANCELED"
-                twitch.update_redemption_status(reward['id'], status)
-                await ctx.send("введённого имени нет или оно некорректно")
-                print({reward['user_input']})
+                connection = sqlite3.connect(':memory:')
+                cursor = connection.cursor()
+    
+                cursor.executescript(s3_object.read().decode('utf-8'))
+    
+                if cursor.execute(f"SELECT id FROM users WHERE name = '{reward['user_input']}'").fetchone():
+                    status = "FULFILLED"
+                    cursor.execute(f"UPDATE users SET coins = coins + {reward['reward']['cost']} WHERE name = '{reward['user_input']}'")
+                    connection.commit()
+    
+                    cursor.execute("SELECT * FROM users")
+                    data = cursor.fetchall()
+    
+                    s3_object = io.BytesIO()
+                    
+                    output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+                    s3_object.write(output.encode('utf-8'))
+    
+                    s3_object.seek(0)
+    
+                    s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+                    
+                    twitch.update_redemption_status(reward['id'], status)
+                    member = guild.get_member_named(reward['user_input'])
+                    await channel.send(f"{reward['user_login']} перевёл флюпики {member.mention}")
+                else:
+                    status = "CANCELED"
+                    twitch.update_redemption_status(reward['id'], status)
+                    await ctx.send("введённого имени нет или оно некорректно")
+                    print({reward['user_input']})
                 
             except Exception as e:
                 print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
