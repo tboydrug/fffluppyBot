@@ -39,7 +39,7 @@ ROLES_TO_CHANGE = [
     {'role_id': 1102249945207160903, 'colors': ['#020202', '#fa0000', '#d38f4c', '#f8fa00', '#4caf2d', '#00ffe9', '#374ac0', '#d666cc']}
 ]
 
-def is_valid_sqlite_database():
+async def is_valid_sqlite_database():
     try:
         s3.head_object(Bucket=bucket_name, Key='server.db')
         print("База данных найдена")
