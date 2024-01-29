@@ -79,7 +79,7 @@ async def on_ready():
 
     # Попробуем загрузить файл с Amazon S3
     try:
-        if is_valid_sqlite_database():
+        if await is_valid_sqlite_database():
             s3_object = io.BytesIO()
             s3.download_fileobj(bucket_name, 'server.db', s3_object)
             s3_object.seek(0)
@@ -146,7 +146,7 @@ async def on_ready():
             except NameError:
                 pass
 
-    if is_valid_sqlite_database():
+    if await is_valid_sqlite_database():
         if remove_expired_roles.is_running():
             remove_expired_roles.cancel()
             print("remove_expired_roles отменено")
