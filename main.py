@@ -132,7 +132,6 @@ async def on_ready():
         connection.close()
         
     if remove_expired_roles.is_running():
-      remove_expired_roles.cancel()
         remove_expired_roles.cancel()
         print("remove_expired_roles отменено")
 
