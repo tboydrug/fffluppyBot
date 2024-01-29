@@ -40,7 +40,7 @@ ROLES_TO_CHANGE = [
 
 def is_valid_sqlite_database():
     try:
-        s3.download_file(bucket_name, 'server.db', 'server.db')
+        # s3.download_file(bucket_name, 'server.db', 'server.db')
         s3_object = io.BytesIO()
         s3.download_fileobj(bucket_name, 'server.db', s3_object)
         s3_object.seek(0)
@@ -105,10 +105,9 @@ async def on_ready():
                     cursor.execute(
                         "INSERT INTO users (name, id, tw_id, coins, rep, rank, points) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (username, member.id, 'NULL', 0, 0, 0, 0))
-                    print(f"{username} добавлен в базу данных")
                 else:
                     cursor.execute(f"UPDATE users SET name = ? WHERE id = {member.id}", (username,))
-                    print("элементы базы данных обновленны")
+                print("База данных обновлена")
     
         connection.commit()
     
