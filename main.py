@@ -55,7 +55,10 @@ def is_valid_sqlite_database():
         return False
     finally:
         if 'connection' in locals():
-            connection.close()
+            try:
+                connection.close()
+            except NameError:
+                pass
 
 @client.event
 async def on_ready():
