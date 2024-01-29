@@ -40,7 +40,7 @@ ROLES_TO_CHANGE = [
 
 def is_valid_sqlite_database():
     try:
-        # s3.download_file(bucket_name, 'server.db', 'server.db')
+        s3.download_file(bucket_name, 'server.db', 'server.db')
         s3_object = io.BytesIO()
         s3.download_fileobj(bucket_name, 'server.db', s3_object)
         s3_object.seek(0)
