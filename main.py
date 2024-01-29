@@ -50,7 +50,89 @@ async def on_ready():
     # await client.user.edit(avatar=avatar)
 
     # Попробуем загрузить файл с Amazon S3
+    try:
+        print("начало работы с бд")
+        try:
+            print("проверка целостности бд")
+            if await is_valid_sqlite_database():
+                s3_object = io.BytesIO()
+                s3.download_fileobj(bucket_name, 'server.db', s3_object)
+                s3_object.seek(0)
+                connection = sqlite3.connect(':memory:')
+                cursor = connection.cursor()
+            else:
+                print(f"Не удалось найти базу данных. Переходим к инициализации. Ошибка: {str(e)}")
+                # Если файла нет, используем код для работы с дисковым файлом
+                connection = sqlite3.connect('server.db')
+                cursor = connection.cursor()
+        except Exception as e:
+            print(f"Ошибка: {str(e)}")
+            
+        cursor.execute("""CREATE TABLE IF NOT EXISTS users(
+            name TEXT,
+            id INT,
+            tw_id TEXT,
+            coins INT,
+            rep INT,
+            rank INT,
+            points INT
+        )""")
+        cursor.execute("""CREATE TABLE IF NOT EXISTS roles(
+            role_id INT, 
+            role_name TEXT, 
+            color TEXT, 
+            created_at INT
+        )""")
+        
+        for guild in client.guilds:
+            for member in guild.members:
+                if member.discriminator is None:
+                    username = f"{member.name}#{member.discriminator}"
+                else:
+                    username = member.name
+                if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
+                    cursor.execute(
+                        "INSERT INTO users (name, id, tw_id, coins, rep, rank, points) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (username, member.id, 'NULL', 0, 0, 0, 0))
+                else:
+                    cursor.execute(f"UPDATE users SET name = ? WHERE id = {member.id}", (username,))
+                print("База данных обновлена")
     
+        connection.commit()
+    
+        cursor.execute("SELECT * FROM users")
+        data = cursor.fetchall()
+    
+        print(f"данные для форматирования базы данных {data}")
+        # Создаем io.BytesIO объект и записываем в него содержимое базы данных
+        s3_object = io.BytesIO()
+    
+        output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+        s3_object.write(output.encode('utf-8'))
+        # Переместите указатель файла в начало перед чтением
+        s3_object.seek(0)
+        # Загружаем файл базы данных на Amazon S3
+        s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+    except Exception as e:
+        print(f"Не удалось инициализировать базу данных. Ошибка: {str(e)}")
+    finally:
+        if 'connection' in locals():
+            try:
+                connection.close()
+                print("База данных инициализирована.")
+            except NameError:
+                pass
+
+    if await is_valid_sqlite_database():
+        if remove_expired_roles.is_running():
+            remove_expired_roles.cancel()
+            print("remove_expired_roles отменено")
+
+        try:
+            remove_expired_roles.start()
+            #change_color.start()
+        except NameError:
+            pass
     
     guild = client.get_guild(guild_id)
 
