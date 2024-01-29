@@ -142,8 +142,11 @@ async def on_ready():
             remove_expired_roles.cancel()
             print("remove_expired_roles отменено")
 
+    try:
         remove_expired_roles.start()
         #change_color.start()
+    except NameError:
+        pass
     
     guild = client.get_guild(guild_id)
 
