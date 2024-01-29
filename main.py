@@ -447,6 +447,9 @@ async def remove_expired_roles():
     s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
     s3_object.seek(0)
+
+    expired_roles = []
+    
     try:
         connection = sqlite3.connect(':memory:')
         cursor = connection.cursor()
