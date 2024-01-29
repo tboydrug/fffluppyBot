@@ -79,17 +79,20 @@ async def on_ready():
 
     # Попробуем загрузить файл с Amazon S3
     try:
-        if await is_valid_sqlite_database():
-            s3_object = io.BytesIO()
-            s3.download_fileobj(bucket_name, 'server.db', s3_object)
-            s3_object.seek(0)
-            connection = sqlite3.connect(':memory:')
-            cursor = connection.cursor()
-        else:
-            print(f"Не удалось найти базу данных. Переходим к инициализации. Ошибка: {str(e)}")
-            # Если файла нет, используем код для работы с дисковым файлом
-            connection = sqlite3.connect('server.db')
-            cursor = connection.cursor()
+        try:
+            if await is_valid_sqlite_database():
+                s3_object = io.BytesIO()
+                s3.download_fileobj(bucket_name, 'server.db', s3_object)
+                s3_object.seek(0)
+                connection = sqlite3.connect(':memory:')
+                cursor = connection.cursor()
+            else:
+                print(f"Не удалось найти базу данных. Переходим к инициализации. Ошибка: {str(e)}")
+                # Если файла нет, используем код для работы с дисковым файлом
+                connection = sqlite3.connect('server.db')
+                cursor = connection.cursor()
+        except Exception as e:
+            print(f"Ошибка: {str(e)}")
             
         cursor.execute("""CREATE TABLE IF NOT EXISTS users(
             name TEXT,
