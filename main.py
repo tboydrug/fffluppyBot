@@ -129,7 +129,7 @@ async def on_ready():
         s3.upload_fileobj(s3_object, bucket_name, 'server.db')
     except Exception as e:
         print(f"Не удалось инициализировать базу данных. Ошибка: {str(e)}")
-    finally:
+    :
         print("База данных инициализирована.")
         connection.close()
         
@@ -172,7 +172,11 @@ async def test(ctx):
     except Exception as e:
         print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
     finally:
-        connection.close()
+        if 'connection' in locals():
+            try:
+                connection.close()
+            except NameError:
+                pass
         
     await ctx.send(message)
 
@@ -239,7 +243,11 @@ async def баланс(ctx):
     except Exception as e:
         print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
     finally:
-        connection.close()
+        if 'connection' in locals():
+            try:
+                connection.close()
+            except NameError:
+                pass
         
     await ctx.send(embed=embed)
 
@@ -270,7 +278,11 @@ async def add_coins(ctx, member: disnake.Member, count: int):
     except Exception as e:
         print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
     finally:
-        connection.close()
+        if 'connection' in locals():
+            try:
+                connection.close()
+            except NameError:
+                pass
         
     print(f"{ctx.author.mention} начислил {member.mention} {count} флюпиков")
 
@@ -303,7 +315,11 @@ async def create_role(guild, role_name, duration, colour):
         except Exception as e:
             print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
         finally:
-            connection.close()
+            if 'connection' in locals():
+                try:
+                    connection.close()
+                except NameError:
+                    pass
     else:
         print("Роль уже существует")
 
@@ -336,7 +352,11 @@ async def remove_role(role_id, duration, created_at):
     except Exception as e:
         print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
     finally:
-        connection.close()
+        if 'connection' in locals():
+            try:
+                connection.close()
+            except NameError:
+                pass
 
 @client.slash_command(description="Кастомная роль, которая НЕ отображается отдельно в списке участников")
 async def купить_роль(ctx, name: str, colour: str = '020202'):
@@ -367,7 +387,11 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
     except Exception as e:
         print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
     finally:
-        connection.close()
+        if 'connection' in locals():
+            try:
+                connection.close()
+            except NameError:
+                pass
     # проверка наличия достаточного количества денег у пользователя
     if balance >= 5000:
         # создаем роль
@@ -402,7 +426,11 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
         except Exception as e:
             print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
         finally:
-            connection.close()
+            if 'connection' in locals():
+                try:
+                    connection.close()
+                except NameError:
+                    pass
     else:
         await ctx.send(f"{ctx.author.mention}, у вас недостаточно монет для покупки роли.")
 
@@ -463,7 +491,11 @@ async def remove_expired_roles():
     except Exception as e:
         print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
     finally:
-        connection.close()
+        if 'connection' in locals():
+            try:
+                connection.close()
+            except NameError:
+                pass
     for expired_role in expired_roles:
         print("check role")
         role_id = expired_role[0]
@@ -495,7 +527,11 @@ async def remove_expired_roles():
             except Exception as e:
                 print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
             finally:
-                connection.close()
+                if 'connection' in locals():
+                    try:
+                        connection.close()
+                    except NameError:
+                        pass
             
             await channel.send(f"Role '{role_name}' deleted")
 
@@ -596,7 +632,11 @@ async def on_member_update(before, after):
     except Exception as e:
         print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
     finally:
-        connection.close()
+        if 'connection' in locals():
+            try:
+                connection.close()
+            except NameError:
+                pass
 
 @client.event
 async def on_member_join(member):
@@ -637,7 +677,11 @@ async def on_member_join(member):
     except Exception as e:
         print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
     finally:
-        connection.close()
+        if 'connection' in locals():
+            try:
+                connection.close()
+            except NameError:
+                pass
 
     role = disnake.utils.get(member.guild.roles, id=1090194970050318356)
 
@@ -756,7 +800,11 @@ async def перевод(ctx):
             except Exception as e:
                 print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
             finally:
-                connection.close()
+                if 'connection' in locals():
+                    try:
+                        connection.close()
+                    except NameError:
+                        pass
 
     else:
         await ctx.send(f"Канал с ID {channel} не найден или нет невыполненных наград.")
