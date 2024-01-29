@@ -133,10 +133,9 @@ async def on_ready():
         if 'connection' in locals():
             try:
                 connection.close()
+                print("База данных инициализирована.")
             except NameError:
                 pass
-        print("База данных инициализирована.")
-        connection.close()
         
     if remove_expired_roles.is_running():
         remove_expired_roles.cancel()
@@ -184,7 +183,6 @@ async def test(ctx):
                 pass
         
     await ctx.send(message)
-
   
 
 @tasks.loop(hours=24)
@@ -397,6 +395,8 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
                 connection.close()
             except NameError:
                 pass
+
+    
     # проверка наличия достаточного количества денег у пользователя
     if balance >= 5000:
         # создаем роль
@@ -501,6 +501,7 @@ async def remove_expired_roles():
                 connection.close()
             except NameError:
                 pass
+                
     for expired_role in expired_roles:
         print("check role")
         role_id = expired_role[0]
