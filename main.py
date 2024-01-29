@@ -1,6 +1,7 @@
 from keep_alive import keep_alive
 import subprocess
 import boto3
+import botocore.exceptions
 import disnake
 # from disnake import Permissions
 import json
@@ -41,6 +42,10 @@ ROLES_TO_CHANGE = [
 def is_valid_sqlite_database():
     try:
         s3.head_object(Bucket=bucket_name, Key='server.db')
+    except botocore.exceptions.ClientError as e:
+        print("Файл 'server.db' не найден в бакете S3.")
+        return False
+    try:
         s3.download_file(bucket_name, 'server.db', 'server.db')
         s3_object = io.BytesIO()
         s3.download_fileobj(bucket_name, 'server.db', s3_object)
