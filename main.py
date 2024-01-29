@@ -42,6 +42,7 @@ ROLES_TO_CHANGE = [
 def is_valid_sqlite_database():
     try:
         s3.head_object(Bucket=bucket_name, Key='server.db')
+        return True
     except botocore.exceptions.ClientError as e:
         print("Файл 'server.db' не найден в бакете S3.")
         return False
