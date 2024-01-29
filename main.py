@@ -136,13 +136,14 @@ async def on_ready():
                 print("База данных инициализирована.")
             except NameError:
                 pass
-        
-    if remove_expired_roles.is_running():
-        remove_expired_roles.cancel()
-        print("remove_expired_roles отменено")
 
-    remove_expired_roles.start()
-    #change_color.start()
+    if is_valid_sqlite_database():
+        if remove_expired_roles.is_running():
+            remove_expired_roles.cancel()
+            print("remove_expired_roles отменено")
+
+        remove_expired_roles.start()
+        #change_color.start()
     
     guild = client.get_guild(guild_id)
 
