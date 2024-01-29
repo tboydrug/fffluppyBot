@@ -48,68 +48,73 @@ async def on_ready():
 
     # Попробуем загрузить файл с Amazon S3
     try:
-        print("Подключение к существующей базе данных")
-        s3.download_file(bucket_name, 'server.db', 'server.db')
-        # Если загрузка успешна, используем код для работы с памятью
-        s3_object = io.BytesIO()
-        s3.download_fileobj(bucket_name, 'server.db', s3_object)
-        s3_object.seek(0)
-        connection = sqlite3.connect(':memory:')
-        cursor = connection.cursor()
-    except Exception as e:
-        print(f"Файл не существует на Amazon S3. Ошибка: {str(e)}")
-        # Если файла нет, используем код для работы с дисковым файлом
-        connection = sqlite3.connect('server.db')
-        cursor = connection.cursor()
-    cursor.execute("""CREATE TABLE IF NOT EXISTS users(
-        name TEXT,
-        id INT,
-        tw_id TEXT,
-        coins INT,
-        rep INT,
-        rank INT,
-        points INT
-    )""")
-    cursor.execute("""CREATE TABLE IF NOT EXISTS roles(
-        role_id INT, 
-        role_name TEXT, 
-        color TEXT, 
-        created_at INT
-    )""")
+        try:
+            s3.download_file(bucket_name, 'server.db', 'server.db')
+            # Если загрузка успешна, используем код для работы с памятью
+            s3_object = io.BytesIO()
+            s3.download_fileobj(bucket_name, 'server.db', s3_object)
+            s3_object.seek(0)
+            connection = sqlite3.connect(':memory:')
+            cursor = connection.cursor()
+        except Exception as e:
+            print(f"Не удалось найти базу данных. Переходим к инициализации. Ошибка: {str(e)}")
+            # Если файла нет, используем код для работы с дисковым файлом
+            connection = sqlite3.connect('server.db')
+            cursor = connection.cursor()
+        cursor.execute("""CREATE TABLE IF NOT EXISTS users(
+            name TEXT,
+            id INT,
+            tw_id TEXT,
+            coins INT,
+            rep INT,
+            rank INT,
+            points INT
+        )""")
+        cursor.execute("""CREATE TABLE IF NOT EXISTS roles(
+            role_id INT, 
+            role_name TEXT, 
+            color TEXT, 
+            created_at INT
+        )""")
+        
+        for guild in client.guilds:
+            for member in guild.members:
+                if member.discriminator is None:
+                    username = f"{member.name}#{member.discriminator}"
+                else:
+                    username = member.name
+                if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
+                    cursor.execute(
+                        "INSERT INTO users (name, id, tw_id, coins, rep, rank, points) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (username, member.id, 'NULL', 0, 0, 0, 0))
+                    print(f"{username} добавлен в базу данных")
+                else:
+                    cursor.execute(f"UPDATE users SET name = ? WHERE id = {member.id}", (username,))
+                    print("элементы базы данных обновленны")
     
-    for guild in client.guilds:
-        for member in guild.members:
-            if member.discriminator is None:
-                username = f"{member.name}#{member.discriminator}"
-            else:
-                username = member.name
-            if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
-                cursor.execute(
-                    "INSERT INTO users (name, id, tw_id, coins, rep, rank, points) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (username, member.id, 'NULL', 0, 0, 0, 0))
-                print(f"{username} добавлен в базу данных")
-            else:
-                cursor.execute(f"UPDATE users SET name = ? WHERE id = {member.id}", (username,))
-                print("элементы базы данных обновленны")
-
-    connection.commit()
-
-    cursor.execute("SELECT * FROM users")
-    data = cursor.fetchall()
-
-    print(f"данные для форматирования базы данных {data}")
-    # Создаем io.BytesIO объект и записываем в него содержимое базы данных
-    s3_object = io.BytesIO()
-
-    output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
-    s3_object.write(output.encode('utf-8'))
-    # Переместите указатель файла в начало перед чтением
-    s3_object.seek(0)
-    # Загружаем файл базы данных на Amazon S3
-    s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-    connection.close()
-
+        connection.commit()
+    
+        cursor.execute("SELECT * FROM users")
+        data = cursor.fetchall()
+    
+        print(f"данные для форматирования базы данных {data}")
+        # Создаем io.BytesIO объект и записываем в него содержимое базы данных
+        s3_object = io.BytesIO()
+    
+        output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+        s3_object.write(output.encode('utf-8'))
+        # Переместите указатель файла в начало перед чтением
+        s3_object.seek(0)
+        # Загружаем файл базы данных на Amazon S3
+        s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+    except Exception as e:
+        print(f"Не удалось инициализировать базу данных. Ошибка: {str(e)}")
+    finally:
+        print("База данных инициализирована.")
+        connection.close()
+        
     if remove_expired_roles.is_running():
+      remove_expired_roles.cancel()
         remove_expired_roles.cancel()
         print("remove_expired_roles отменено")
 
@@ -133,19 +138,23 @@ async def on_ready():
 @client.command()
 async def test(ctx):
     author = ctx.message.author
+
+    try:
+        connection = sqlite3.connect('server.db')
+        cursor = connection.cursor()
+        cursor.execute("SELECT name FROM users WHERE id = ?", (author.id,))
+        result = cursor.fetchone()
     
-    connection = sqlite3.connect('server.db')
-    cursor = connection.cursor()
-    cursor.execute("SELECT name FROM users WHERE id = ?", (author.id,))
-    result = cursor.fetchone()
-
-    if result:
-        name = result[0]
-        message = f"Привет, {name}!"
-    else:
-        message = "Твое имя не найдено в базе данных."
-
-    connection.close()
+        if result:
+            name = result[0]
+            message = f"Привет, {name}!"
+        else:
+            message = "Твое имя не найдено в базе данных."
+    except Exception as e:
+        print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+    finally:
+        connection.close()
+        
     await ctx.send(message)
 
   
@@ -196,17 +205,23 @@ async def баланс(ctx):
     s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
     s3_object.seek(0)
-    
-    connection = sqlite3.connect(':memory:')
-    cursor = connection.cursor()
 
-    cursor.executescript(s3_object.read().decode('utf-8'))
+    try:
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
     
-    cursor.execute(f"SELECT coins FROM users WHERE id = '{user_id}'")
-    result = cursor.fetchone()
-
-    embed = disnake.Embed(title="Баланс")
-    embed.add_field(name=f"У вас 🪙 {result[0]}", value="\n Чтобы пополнить баланс воспользуйтесь переводом флюпиков на твиче")
+        cursor.executescript(s3_object.read().decode('utf-8'))
+        
+        cursor.execute(f"SELECT coins FROM users WHERE id = '{user_id}'")
+        result = cursor.fetchone()
+    
+        embed = disnake.Embed(title="Баланс")
+        embed.add_field(name=f"У вас 🪙 {result[0]}", value="\n Чтобы пополнить баланс воспользуйтесь переводом флюпиков на твиче")
+    except Exception as e:
+        print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+    finally:
+        connection.close()
+        
     await ctx.send(embed=embed)
 
 
@@ -215,25 +230,29 @@ async def баланс(ctx):
 async def add_coins(ctx, member: disnake.Member, count: int):
     await ctx.channel.purge(limit=1)
     user_id = str(member.id)
+
+    try:
+        connection = sqlite3.connect('server.db')
+        cursor = connection.cursor()
+        cursor.execute(f"UPDATE users SET coins = coins + '{count}' WHERE id = '{user_id}'")
+        connection.commit()
     
-    connection = sqlite3.connect('server.db')
-    cursor = connection.cursor()
-    cursor.execute(f"UPDATE users SET coins = coins + '{count}' WHERE id = '{user_id}'")
-    connection.commit()
-
-    cursor.execute("SELECT * FROM users")
-    data = cursor.fetchall()
-
-    s3_object = io.BytesIO()
+        cursor.execute("SELECT * FROM users")
+        data = cursor.fetchall()
     
-    output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
-    s3_object.write(output.encode('utf-8'))
-
-    s3_object.seek(0)
-
-    s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-
-    connection.close()
+        s3_object = io.BytesIO()
+        
+        output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+        s3_object.write(output.encode('utf-8'))
+    
+        s3_object.seek(0)
+    
+        s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+    except Exception as e:
+        print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+    finally:
+        connection.close()
+        
     print(f"{ctx.author.mention} начислил {member.mention} {count} флюпиков")
 
 
@@ -242,27 +261,30 @@ async def create_role(guild, role_name, duration, colour):
         role = await guild.create_role(name=role_name, color=colour)
         print("Роль создана")
         created_at = int(time.time())
-        
-        connection = sqlite3.connect('server.db')
-        cursor = connection.cursor()
-        cursor.execute(f"INSERT INTO roles (role_id, role_name, color, created_at) VALUES ({role.id}, '{role_name}', '{colour}', {created_at + duration})")
-        connection.commit()
 
-        cursor.execute("SELECT * FROM users")
-        data = cursor.fetchall()
-
-        s3_object = io.BytesIO()
-        
-        output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
-        s3_object.write(output.encode('utf-8'))
-
-        s3_object.seek(0)
-
-        s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+        try:
+            connection = sqlite3.connect('server.db')
+            cursor = connection.cursor()
+            cursor.execute(f"INSERT INTO roles (role_id, role_name, color, created_at) VALUES ({role.id}, '{role_name}', '{colour}', {created_at + duration})")
+            connection.commit()
     
-        asyncio.create_task(remove_role(role.id, duration, created_at))
-
-        connection.close()
+            cursor.execute("SELECT * FROM users")
+            data = cursor.fetchall()
+    
+            s3_object = io.BytesIO()
+            
+            output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+            s3_object.write(output.encode('utf-8'))
+    
+            s3_object.seek(0)
+    
+            s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+        
+            asyncio.create_task(remove_role(role.id, duration, created_at))
+        except Exception as e:
+            print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+        finally:
+            connection.close()
     else:
         print("Роль уже существует")
 
@@ -274,25 +296,28 @@ async def remove_role(role_id, duration, created_at):
     current_time = int(time.time())
     if role and created_at + duration <= current_time:
         await role.delete()
-        
-    connection = sqlite3.connect('server.db')
-    cursor = connection.cursor()
-    cursor.execute(f"DELETE FROM roles WHERE role_id = {role_id}")
-    connection.commit()
 
-    cursor.execute("SELECT * FROM users")
-    data = cursor.fetchall()
-
-    s3_object = io.BytesIO()
+    try:
+        connection = sqlite3.connect('server.db')
+        cursor = connection.cursor()
+        cursor.execute(f"DELETE FROM roles WHERE role_id = {role_id}")
+        connection.commit()
     
-    output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
-    s3_object.write(output.encode('utf-8'))
-
-    s3_object.seek(0)
-
-    s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-
-    connection.close()
+        cursor.execute("SELECT * FROM users")
+        data = cursor.fetchall()
+    
+        s3_object = io.BytesIO()
+        
+        output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+        s3_object.write(output.encode('utf-8'))
+    
+        s3_object.seek(0)
+    
+        s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+    except Exception as e:
+        print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+    finally:
+        connection.close()
 
 @client.slash_command(description="Кастомная роль, которая НЕ отображается отдельно в списке участников")
 async def купить_роль(ctx, name: str, colour: str = '020202'):
@@ -312,14 +337,18 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
     s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
     s3_object.seek(0)
-    
-    connection = sqlite3.connect(':memory:')
-    cursor = connection.cursor()
 
-    cursor.executescript(s3_object.read().decode('utf-8'))
-    cursor.execute(f"SELECT coins FROM users WHERE id = '{user_id}'")
-    balance = cursor.fetchone()[0]
-    connection.close()
+    try:
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
+    
+        cursor.executescript(s3_object.read().decode('utf-8'))
+        cursor.execute(f"SELECT coins FROM users WHERE id = '{user_id}'")
+        balance = cursor.fetchone()[0]
+    except Exception as e:
+        print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+    finally:
+        connection.close()
     # проверка наличия достаточного количества денег у пользователя
     if balance >= 5000:
         # создаем роль
@@ -334,23 +363,27 @@ async def купить_роль(ctx, name: str, colour: str = '020202'):
         await ctx.author.add_roles(role)
         await ctx.send(f"{ctx.author.mention}, роль '{name}' успешно куплена за 5000 монет.")
         # вычитаем стоимость роли из баланса пользователя
-        connection = sqlite3.connect('server.db')
-        cursor = connection.cursor()
-        cursor.execute(f"UPDATE users SET coins = coins - 5000 WHERE id = '{user_id}'")
-        connection.commit()
-
-        cursor.execute("SELECT * FROM users")
-        data = cursor.fetchall()
-
-        s3_object = io.BytesIO()
-        
-        output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
-        s3_object.write(output.encode('utf-8'))
-
-        s3_object.seek(0)
-
-        s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-        connection.close()
+        try:
+            connection = sqlite3.connect('server.db')
+            cursor = connection.cursor()
+            cursor.execute(f"UPDATE users SET coins = coins - 5000 WHERE id = '{user_id}'")
+            connection.commit()
+    
+            cursor.execute("SELECT * FROM users")
+            data = cursor.fetchall()
+    
+            s3_object = io.BytesIO()
+            
+            output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+            s3_object.write(output.encode('utf-8'))
+    
+            s3_object.seek(0)
+    
+            s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+        except Exception as e:
+            print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+        finally:
+            connection.close()
     else:
         await ctx.send(f"{ctx.author.mention}, у вас недостаточно монет для покупки роли.")
 
@@ -397,15 +430,18 @@ async def remove_expired_roles():
     s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
     s3_object.seek(0)
+    try:
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
     
-    connection = sqlite3.connect(':memory:')
-    cursor = connection.cursor()
-
-    cursor.executescript(s3_object.read().decode('utf-8'))
-    
-    cursor.execute("SELECT role_id, role_name, created_at FROM roles")
-    expired_roles = cursor.fetchall()
-    connection.close()
+        cursor.executescript(s3_object.read().decode('utf-8'))
+        
+        cursor.execute("SELECT role_id, role_name, created_at FROM roles")
+        expired_roles = cursor.fetchall()
+    except Exception as e:
+        print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+    finally:
+        connection.close()
     for expired_role in expired_roles:
         print("check role")
         role_id = expired_role[0]
@@ -417,24 +453,27 @@ async def remove_expired_roles():
             channel = client.get_channel(logs_id)
             await role.delete()
             
-            connection = sqlite3.connect('server.db')
-            cursor = connection.cursor()
-            cursor.execute(f"DELETE FROM roles WHERE role_id = {role_id}")
-            connection.commit()
-
-            cursor.execute("SELECT * FROM users")
-            data = cursor.fetchall()
-
-            s3_object = io.BytesIO()
-
-            output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
-            s3_object.write(output.encode('utf-8'))
-
-            s3_object.seek(0)
-
-            s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-
-            connection.close()
+            try:
+                connection = sqlite3.connect('server.db')
+                cursor = connection.cursor()
+                cursor.execute(f"DELETE FROM roles WHERE role_id = {role_id}")
+                connection.commit()
+    
+                cursor.execute("SELECT * FROM users")
+                data = cursor.fetchall()
+    
+                s3_object = io.BytesIO()
+    
+                output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+                s3_object.write(output.encode('utf-8'))
+    
+                s3_object.seek(0)
+    
+                s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+            except Exception as e:
+                print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+            finally:
+                connection.close()
             
             await channel.send(f"Role '{role_name}' deleted")
 
@@ -508,32 +547,34 @@ async def on_member_update(before, after):
     s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
     s3_object.seek(0)
+    try:
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
     
-    connection = sqlite3.connect(':memory:')
-    cursor = connection.cursor()
-
-    cursor.executescript(s3_object.read().decode('utf-8'))
+        cursor.executescript(s3_object.read().decode('utf-8'))
+        
+        before_name = cursor.execute(f"SELECT name FROM users WHERE id = {before.id}").fetchone()
+        if before_name != after_username:
+            if cursor.execute(f"SELECT id FROM users WHERE id = {before.id}").fetchone():
+                cursor.execute("UPDATE users SET name = ? WHERE id = ?", (after_username, before.id))
+                print(f"{before_name} изменил имя на {after.name}")
+                connection.commit()
     
-    before_name = cursor.execute(f"SELECT name FROM users WHERE id = {before.id}").fetchone()
-    if before_name != after_username:
-        if cursor.execute(f"SELECT id FROM users WHERE id = {before.id}").fetchone():
-            cursor.execute("UPDATE users SET name = ? WHERE id = ?", (after_username, before.id))
-            print(f"{before_name} изменил имя на {after.name}")
-            connection.commit()
-
-            cursor.execute("SELECT * FROM users")
-            data = cursor.fetchall()
-
-            s3_object = io.BytesIO()
-            
-            output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
-            s3_object.write(output.encode('utf-8'))
-
-            s3_object.seek(0)
-
-            s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-
-            connection.close()
+                cursor.execute("SELECT * FROM users")
+                data = cursor.fetchall()
+    
+                s3_object = io.BytesIO()
+                
+                output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+                s3_object.write(output.encode('utf-8'))
+    
+                s3_object.seek(0)
+    
+                s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+    except Exception as e:
+        print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+    finally:
+        connection.close()
 
 @client.event
 async def on_member_join(member):
@@ -547,30 +588,34 @@ async def on_member_join(member):
 
     s3_object.seek(0)
     
-    connection = sqlite3.connect(':memory:')
-    cursor = connection.cursor()
-
-    cursor.executescript(s3_object.read().decode('utf-8'))
+    try:
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
     
-    if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
-        cursor.execute("INSERT INTO users (name, id, tw_id, coins, rep, rank, points) VALUES (?, ?, ?, ?, ?, ?, ?)", (username, member.id, 'NULL', 0, 0, 0, 0))
-    else:
-        pass
-
-    connection.commit()
-
-    cursor.execute("SELECT * FROM users")
-    data = cursor.fetchall()
-
-    s3_object = io.BytesIO()
+        cursor.executescript(s3_object.read().decode('utf-8'))
+        
+        if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
+            cursor.execute("INSERT INTO users (name, id, tw_id, coins, rep, rank, points) VALUES (?, ?, ?, ?, ?, ?, ?)", (username, member.id, 'NULL', 0, 0, 0, 0))
+        else:
+            pass
     
-    output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
-    s3_object.write(output.encode('utf-8'))
-
-    s3_object.seek(0)
-
-    s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-    connection.close()
+        connection.commit()
+    
+        cursor.execute("SELECT * FROM users")
+        data = cursor.fetchall()
+    
+        s3_object = io.BytesIO()
+        
+        output = subprocess.check_output(['sqlite3', 'server.db', '.dump'], text=True)
+        s3_object.write(output.encode('utf-8'))
+    
+        s3_object.seek(0)
+    
+        s3.upload_fileobj(s3_object, bucket_name, 'server.db')
+    except Exception as e:
+        print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+    finally:
+        connection.close()
 
     role = disnake.utils.get(member.guild.roles, id=1090194970050318356)
 
@@ -654,7 +699,7 @@ async def перевод(ctx):
             s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
             s3_object.seek(0)
-    
+            try:
             connection = sqlite3.connect(':memory:')
             cursor = connection.cursor()
 
@@ -676,8 +721,6 @@ async def перевод(ctx):
                 s3_object.seek(0)
 
                 s3.upload_fileobj(s3_object, bucket_name, 'server.db')
-
-                connection.close()
                 
                 twitch.update_redemption_status(reward['id'], status)
                 member = guild.get_member_named(reward['user_input'])
@@ -687,6 +730,11 @@ async def перевод(ctx):
                 twitch.update_redemption_status(reward['id'], status)
                 await ctx.send("введённого имени нет или оно некорректно")
                 print({reward['user_input']})
+                
+            except Exception as e:
+                print(f"Не удалось подключиться к базе данных. Ошибка: {str(e)}")
+            finally:
+                connection.close()
 
     else:
         await ctx.send(f"Канал с ID {channel} не найден или нет невыполненных наград.")
