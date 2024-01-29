@@ -148,11 +148,11 @@ async def on_ready():
             remove_expired_roles.cancel()
             print("remove_expired_roles отменено")
 
-    try:
-        remove_expired_roles.start()
-        #change_color.start()
-    except NameError:
-        pass
+        try:
+            remove_expired_roles.start()
+            #change_color.start()
+        except NameError:
+            pass
     
     guild = client.get_guild(guild_id)
 
@@ -487,7 +487,7 @@ async def выделить_роль(ctx, role_id: str):
 async def remove_expired_roles():
     print("remove role check")
     now = int(time.time())
-
+    
     s3_object = io.BytesIO()
     s3.download_fileobj(bucket_name, 'server.db', s3_object)
 
