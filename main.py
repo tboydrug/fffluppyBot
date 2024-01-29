@@ -42,30 +42,32 @@ ROLES_TO_CHANGE = [
 def is_valid_sqlite_database():
     try:
         s3.head_object(Bucket=bucket_name, Key='server.db')
+        print("База данных найдена")
         return True
-    except botocore.exceptions.ClientError as e:
-        print("Файл 'server.db' не найден в бакете S3.")
+    except Exception as e:
+        print(f"Не удалось найти базу данных. Ошибка: {str(e)}")
         return False
-    try:
-        s3.download_file(bucket_name, 'server.db', 'server.db')
-        s3_object = io.BytesIO()
-        s3.download_fileobj(bucket_name, 'server.db', s3_object)
-        s3_object.seek(0)
-        connection = sqlite3.connect(':memory:')
-        cursor = connection.cursor()
-        connection.execute("SELECT * FROM sqlite_master")
-        print('База данных не повреждена')
-        return True
-    except sqlite3.Error as e:
-        # Если произошла ошибка, файл не является корректной базой данных SQLite
-        print(f"Файл не является корректной базой данных SQLite. Ошибка: {str(e)}")
-        return False
-    finally:
-        if 'connection' in locals():
-            try:
-                connection.close()
-            except NameError:
-                pass
+#    try:
+#        s3.download_file(bucket_name, 'server.db', 'server.db')
+#        print('База данных не повреждена')
+#        s3_object = io.BytesIO()
+#        s3.download_fileobj(bucket_name, 'server.db', s3_object)
+#        s3_object.seek(0)
+#        connection = sqlite3.connect(':memory:')
+#        cursor = connection.cursor()
+#        connection.execute("SELECT * FROM sqlite_master")
+#        print('База данных не повреждена')
+#        return True
+#    except sqlite3.Error as e:
+#        # Если произошла ошибка, файл не является корректной базой данных SQLite
+#        print(f"Файл не является корректной базой данных SQLite. Ошибка: {str(e)}")
+#        return False
+#    finally:
+#        if 'connection' in locals():
+#            try:
+#                connection.close()
+#            except NameError:
+#                pass
 
 @client.event
 async def on_ready():
