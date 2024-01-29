@@ -40,6 +40,7 @@ ROLES_TO_CHANGE = [
 ]
 
 async def is_valid_sqlite_database():
+    print("проверка наличия бд")
     try:
         s3.head_object(Bucket=bucket_name, Key='server.db')
         print("База данных найдена")
@@ -79,7 +80,9 @@ async def on_ready():
 
     # Попробуем загрузить файл с Amazon S3
     try:
+        print("начало работы с бд")
         try:
+            print("проверка целостности бд")
             if await is_valid_sqlite_database():
                 s3_object = io.BytesIO()
                 s3.download_fileobj(bucket_name, 'server.db', s3_object)
